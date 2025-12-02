@@ -8,6 +8,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+back-end/static
 downloads/
 eggs/
 .eggs/
@@ -41,7 +42,7 @@ yarn-error.log*
 /front-end/build/
 /front-end/.pnp
 /front-end/.pnp.js
-
+front-end/package-lock.json
 # Testing
 /coverage
 
