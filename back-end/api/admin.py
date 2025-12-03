@@ -39,4 +39,3 @@ class UserAnswerAdmin(admin.ModelAdmin):
             'fields': ('created_at',)
         }),
     )
-
