@@ -1,5 +1,3 @@
-
-
 """
 Django settings for config project.
 
@@ -56,7 +54,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'api.middleware.DisableCSRFMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -146,7 +143,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
@@ -165,8 +161,10 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:3002",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
