@@ -159,7 +159,7 @@ const History = () => {
                 </div>
                 <div className="col-md-6 text-end">
                   <button className="btn btn-secondary" onClick={fetchAnswers}>
-                    :arrows_counterclockwise: Làm mới
+                    🔄 Làm mới
                   </button>
                 </div>
               </div>

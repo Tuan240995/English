@@ -55,13 +55,13 @@ const TaskDashboard = ({ user }) => {
 
   const getTaskIcon = (taskType) => {
     const icons = {
-      'daily_practice': ':books:',
-      'correct_answers': ':white_check_mark:',
-      'perfect_week': ':trophy:',
-      'streak_master': ':fire:',
-      'topic_master': ':dart:'
+      'daily_practice': '📚',
+      'correct_answers': '✔️',
+      'perfect_week': '🏆',
+      'streak_master': '🔥',
+      'topic_master': '🎯'
     };
-    return icons[taskType] || ':clipboard:';
+    return icons[taskType] || '📋';
   };
 
   const formatDate = (dateString) => {
@@ -104,19 +104,19 @@ const TaskDashboard = ({ user }) => {
             <div className="card-body">
               <div className="row text-center">
                 <div className="col-md-3">
-                  <h4>:trophy: Tổng điểm</h4>
+                  <h4>🏆 Tổng điểm</h4>
                   <h2>{dashboardData?.user_points?.total_points || 0}</h2>
                 </div>
                 <div className="col-md-3">
-                  <h4>:bar_chart: Điểm tuần</h4>
+                  <h4>📊 Điểm tuần</h4>
                   <h2>{dashboardData?.user_points?.weekly_points || 0}</h2>
                 </div>
                 <div className="col-md-3">
-                  <h4>:fire: Chuỗi hiện tại</h4>
+                  <h4>🔥 Chuỗi hiện tại</h4>
                   <h2>{dashboardData?.user_points?.current_streak || 0}</h2>
                 </div>
                 <div className="col-md-3">
-                  <h4>:star: Chuỗi dài nhất</h4>
+                  <h4>⭐ Chuỗi dài nhất</h4>
                   <h2>{dashboardData?.user_points?.longest_streak || 0}</h2>
                 </div>
               </div>
@@ -128,7 +128,7 @@ const TaskDashboard = ({ user }) => {
         <div className="col-lg-8 mb-4">
           <div className="card">
             <div className="card-header bg-info text-white">
-              <h5 className="mb-0">:clipboard: Nhiệm vụ hàng tuần</h5>
+              <h5 className="mb-0">📋 Nhiệm vụ hàng tuần</h5>
             </div>
             <div className="card-body">
               {weeklyTasks.length === 0 ? (
@@ -171,10 +171,10 @@ const TaskDashboard = ({ user }) => {
 
                             <div className="d-flex justify-content-between align-items-center">
                               <small className="text-success">
-                                :gift: {task.points_reward} điểm
+                                🎁 {task.points_reward} điểm
                               </small>
                               {progress?.is_completed && (
-                                <span className="badge bg-success">:white_check_mark: Hoàn thành</span>
+                                <span className="badge bg-success">✔️ Hoàn thành</span>
                               )}
                             </div>
                           </div>
@@ -192,7 +192,7 @@ const TaskDashboard = ({ user }) => {
         <div className="col-lg-4 mb-4">
           <div className="card">
             <div className="card-header bg-warning text-dark">
-              <h5 className="mb-0">:trophy: Bảng xếp hạng</h5>
+              <h5 className="mb-0">🏆 Bảng xếp hạng</h5>
             </div>
             <div className="card-body">
               <div className="btn-group w-100 mb-3" role="group">
@@ -230,7 +230,7 @@ const TaskDashboard = ({ user }) => {
                       <div className="text-end">
                         <div className="fw-bold">{user.total_points} điểm</div>
                         <small className={user.username === dashboardData?.user_points?.username ? 'text-white-50' : 'text-muted'}>
-                          :fire: {user.current_streak} ngày
+                          🔥 {user.current_streak} ngày
                         </small>
                       </div>
                     </div>
@@ -250,19 +250,19 @@ const TaskDashboard = ({ user }) => {
             <div className="card-body">
               <div className="row text-center">
                 <div className="col-md-3">
-                  <h4>:memo: Tổng câu hỏi</h4>
+                  <h4>📝 Tổng câu hỏi</h4>
                   <h3>{dashboardData?.weekly_summary?.total_questions || 0}</h3>
                 </div>
                 <div className="col-md-3">
-                  <h4>:white_check_mark: Trả lời đúng</h4>
+                  <h4>✔️ Trả lời đúng</h4>
                   <h3>{dashboardData?.weekly_summary?.correct_answers || 0}</h3>
                 </div>
                 <div className="col-md-3">
-                  <h4>:dart: Điểm kiếm được</h4>
+                  <h4>🎯 Điểm kiếm được</h4>
                   <h3>{dashboardData?.weekly_summary?.points_earned || 0}</h3>
                 </div>
                 <div className="col-md-3">
-                  <h4>:date: Ngày hoạt động</h4>
+                  <h4>📅 Ngày hoạt động</h4>
                   <h3>{dashboardData?.weekly_summary?.days_active || 0}</h3>
                 </div>
               </div>
@@ -275,20 +275,20 @@ const TaskDashboard = ({ user }) => {
           <div className="col-12 mb-4">
             <div className="card">
               <div className="card-header bg-info text-white">
-                <h5 className="mb-0">:date: Hoạt động hôm nay</h5>
+                <h5 className="mb-0">📅 Hoạt động hôm nay</h5>
               </div>
               <div className="card-body">
                 <div className="row text-center">
                   <div className="col-md-4">
-                    <h5>:memo: Câu hỏi đã làm</h5>
+                    <h5>📝 Câu hỏi đã làm</h5>
                     <h3>{dashboardData.daily_completion.questions_answered}</h3>
                   </div>
                   <div className="col-md-4">
-                    <h5>:white_check_mark: Trả lời đúng</h5>
+                    <h5>✔️ Trả lời đúng</h5>
                     <h3>{dashboardData.daily_completion.correct_answers}</h3>
                   </div>
                   <div className="col-md-4">
-                    <h5>:dart: Độ chính xác</h5>
+                    <h5>🎯 Độ chính xác</h5>
                     <h3>{dashboardData.daily_completion.accuracy_percentage}%</h3>
                   </div>
                 </div>

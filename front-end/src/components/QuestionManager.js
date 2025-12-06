@@ -329,7 +329,7 @@ const QuestionManager = () => {
                   className="btn btn-warning"
                   onClick={() => setShowImportForm(!showImportForm)}
                 >
-                  {showImportForm ? 'Hủy' : ':file_folder: Import File'}
+                  {showImportForm ? 'Hủy' : '📁 Import File'}
                 </button>
                 <button
                   className="btn btn-light"
@@ -623,7 +623,7 @@ Status: Trung bình`}
                           className="btn btn-warning"
                           disabled={loading}
                         >
-                          {loading ? 'Đang import...' : ':file_folder: Import File'}
+                          {loading ? 'Đang import...' : '📁 Import File'}
                         </button>
                       </div>
                     </form>
@@ -634,7 +634,7 @@ Status: Trung bình`}
                         <div className={`alert ${importResult.error_count > 0 ? 'alert-warning' : 'alert-success'}`}>
                           <h6>Kết quả import:</h6>
                           <p className="mb-1">
-                            <strong>:white_check_mark: Thành công:</strong> {importResult.created_count} câu hỏi
+                            <strong>✔️ Thành công:</strong> {importResult.created_count} câu hỏi
                           </p>
                           {importResult.error_count > 0 && (
                             <p className="mb-1">
@@ -675,7 +675,7 @@ Status: Trung bình`}
                     style={{ cursor: 'pointer' }}
                     onClick={() => setShowFilters(!showFilters)}
                   >
-                    <h6 className="mb-0">:mag: Bộ lọc và tìm kiếm</h6>
+                    <h6 className="mb-0">🔍 Bộ lọc và tìm kiếm</h6>
                     <button className="btn btn-sm btn-outline-secondary">
                       {showFilters ? '▼' : '▶'}
                     </button>
@@ -741,7 +741,7 @@ Status: Trung bình`}
                           onClick={clearFilters}
                           disabled={loading}
                         >
-                          :arrows_counterclockwise: Xóa bộ lọc
+                          🔄 Xóa bộ lọc
                         </button>
                       </div>
                     </div>
@@ -765,7 +765,7 @@ Status: Trung bình`}
                           className="btn btn-sm btn-outline-info"
                           onClick={() => setShowFilters(!showFilters)}
                         >
-                          {showFilters ? ':arrow_down_small: Ẩn bộ lọc' : ':mag: Hiện bộ lọc'}
+                          {showFilters ? '🔽 Ẩn bộ lọc' : '🔍 Hiện bộ lọc'}
                         </button>
                       )}
                     </div>
@@ -823,7 +823,7 @@ Status: Trung bình`}
                                     disabled={loading}
                                     title="Sửa câu hỏi"
                                   >
-                                    :pencil2:
+                                    ✏️
                                   </button>
                                   <button
                                     className="btn btn-sm btn-outline-danger"
@@ -831,7 +831,7 @@ Status: Trung bình`}
                                     disabled={loading}
                                     title="Xóa câu hỏi"
                                   >
-                                    :wastebasket:
+                                    🗑️
                                   </button>
                                 </div>
                               </td>

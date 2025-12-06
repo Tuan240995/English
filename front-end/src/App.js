@@ -74,7 +74,7 @@ function AppContent() {
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
         <div className="container">
           <a className="navbar-brand" href="/hoc-tap" onClick={(e) => { e.preventDefault(); navigate('/hoc-tap'); }}>
-            :books: Học Tiếng Anh
+            📚 Học Tiếng Anh
           </a>
 
           <button
@@ -97,7 +97,7 @@ function AppContent() {
                   className={`btn ${getNavLinkClass('/hoc-tap')}`}
                   onClick={(e) => { e.preventDefault(); navigate('/hoc-tap'); }}
                 >
-                  :dart: Học tập
+                  🎯 Học tập
                 </a>
               </li>
               <li className="nav-item">
@@ -106,7 +106,7 @@ function AppContent() {
                   className={`btn ${getNavLinkClass('/quanlycauhoi')}`}
                   onClick={(e) => { e.preventDefault(); navigate('/quanlycauhoi'); }}
                 >
-                  :gear: Quản lý câu hỏi
+                  ⚙️ Quản lý câu hỏi
                 </a>
               </li>
               <li className="nav-item">
@@ -115,7 +115,7 @@ function AppContent() {
                   className={`btn ${getNavLinkClass('/lichsu')}`}
                   onClick={(e) => { e.preventDefault(); navigate('/lichsu'); }}
                 >
-                  :bar_chart: Lịch sử
+                  📊 Lịch sử
                 </a>
               </li>
               <li className="nav-item">
@@ -124,7 +124,7 @@ function AppContent() {
                   className={`btn ${getNavLinkClass('/nhiemvu')}`}
                   onClick={(e) => { e.preventDefault(); navigate('/nhiemvu'); }}
                 >
-                  :dart: Nhiệm vụ
+                  🎯 Nhiệm vụ
                 </a>
               </li>
               <li className="nav-item">
@@ -133,7 +133,7 @@ function AppContent() {
                   className={`btn ${getNavLinkClass('/cauhoituan')}`}
                   onClick={(e) => { e.preventDefault(); navigate('/cauhoituan'); }}
                 >
-                  :memo: Câu hỏi tuần
+                  📝 Câu hỏi tuần
                 </a>
               </li>
               <li className="nav-item">
@@ -141,7 +141,7 @@ function AppContent() {
                   className="btn btn-outline-light"
                   onClick={handleLogout}
                 >
-                  :bust_in_silhouette: {user?.username || 'User'} (Đăng xuất)
+                  👤 {user?.username || 'User'} (Đăng xuất)
                 </button>
               </li>
             </ul>
@@ -154,7 +154,7 @@ function AppContent() {
         <div className="welcome-message">
           <div className="container">
             <div className="alert alert-success">
-              <h4>Chào mừng {user?.username || 'User'}! :wave:</h4>
+              <h4>Chào mừng {user?.username || 'User'}! 👋</h4>
               <p>Bạn đã đăng nhập thành công. Hãy bắt đầu học tiếng Anh ngay!</p>
             </div>
           </div>

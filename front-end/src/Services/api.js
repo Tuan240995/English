@@ -35,7 +35,7 @@ api.interceptors.response.use(
 // Lấy câu hỏi ngẫu nhiên
 export const getRandomQuestion = async (difficulty = 'medium', topicId = null) => {
   try {
-    let url = `/questions/random?difficulty=${difficulty}`;
+    let url = `/questions/random/?difficulty=${difficulty}`;
     if (topicId) {
       url += `&topic_id=${topicId}`;
     }

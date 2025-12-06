@@ -52,7 +52,7 @@ const WeeklyQuestions = ({ user }) => {
       const response = await updateWeeklyQuestionProgress(user.username, currentQuestion.id, userAnswer);
 
       if (response.is_correct) {
-        setFeedback(`:white_check_mark: ${response.message}`);
+        setFeedback(`✔️ ${response.message}`);
 
         // Move to next question
         const remainingQuestions = weeklyData.remaining_questions.filter(q => q.id !== currentQuestion.id);
@@ -78,7 +78,7 @@ const WeeklyQuestions = ({ user }) => {
             progress_percentage: 100,
             is_completed: true
           });
-          setFeedback(':tada: Chúc mừng! Bạn đã hoàn thành tất cả câu hỏi tuần này!');
+          setFeedback('🎉 Chúc mừng! Bạn đã hoàn thành tất cả câu hỏi tuần này!');
         }
       } else {
         // Answer is not correct enough, show feedback
@@ -109,7 +109,7 @@ const WeeklyQuestions = ({ user }) => {
     const remainingQuestions = weeklyData.remaining_questions.filter(q => q.id !== currentQuestion.id);
     setCurrentQuestion(remainingQuestions[0]);
     setUserAnswer('');
-    setFeedback(':black_right_pointing_double_triangle_with_vertical_bar: Bỏ qua câu hỏi này');
+    setFeedback('⏭️ Bỏ qua câu hỏi này');
 
     // Update weekly data to increment completed_count but not points
     setWeeklyData({
@@ -146,7 +146,7 @@ const WeeklyQuestions = ({ user }) => {
     // Set current question
     setCurrentQuestion(questionToRetry);
     setUserAnswer('');
-    setFeedback(':arrows_counterclockwise: Quay lại câu hỏi đã bỏ qua');
+    setFeedback('🔄 Quay lại câu hỏi đã bỏ qua');
     setShowSkippedQuestions(false);
   };
 
@@ -236,7 +236,7 @@ const WeeklyQuestions = ({ user }) => {
         <div className="row mb-4">
           <div className="col-12">
             <h2 className="text-center mb-3">
-              :memo: Câu Hàng Tuần
+              📝 Câu Hàng Tuần
             </h2>
             <div className="card">
               <div className="card-body">
@@ -280,7 +280,7 @@ const WeeklyQuestions = ({ user }) => {
           <div className="row mb-4">
             <div className="col-12">
               <div className="alert alert-success text-center">
-                <h4>:tada: Chúc mừng hoàn thành!</h4>
+                <h4>🎉 Chúc mừng hoàn thành!</h4>
                 <p>Bạn đã hoàn thành tất cả {weeklyData.total_questions} câu hỏi trong tuần này.</p>
                 <p>Tổng điểm nhận được: {weeklyData.completed_count * weeklyData.question_set.points_per_question} điểm</p>
               </div>
@@ -325,7 +325,7 @@ const WeeklyQuestions = ({ user }) => {
                             </>
                           ) : (
                             <>
-                              :loud_sound: Nghe
+                              🔊 Nghe
                             </>
                           )}
                         </button>
@@ -343,7 +343,7 @@ const WeeklyQuestions = ({ user }) => {
                   {feedback && (
                     <div className={`alert ${
                       typeof feedback === 'string'
-                        ? (feedback.includes(':white_check_mark:') ? 'alert-success' : feedback.includes(':black_right_pointing_double_triangle_with_vertical_bar:') ? 'alert-warning' : 'alert-info')
+                        ? (feedback.includes('✔️') ? 'alert-success' : feedback.includes(':⏭️:') ? 'alert-warning' : 'alert-info')
                         : (feedback.type === 'error' ? 'alert-warning' : 'alert-info')
                     } mb-3`}>
                       {typeof feedback === 'string' ? (
@@ -362,7 +362,7 @@ const WeeklyQuestions = ({ user }) => {
                               onClick={() => handlePlayAudio(feedback.correctAnswer)}
                               title="Nghe phát âm đáp án đúng"
                             >
-                              :loud_sound:
+                              🔊
                             </button>
                           </div>
                         </div>
@@ -419,7 +419,7 @@ const WeeklyQuestions = ({ user }) => {
                           onClick={handleShowSkippedQuestions}
                           disabled={isSubmitting}
                         >
-                          :clipboard: Câu đã bỏ qua ({skippedQuestions.length})
+                          📋 Câu đã bỏ qua ({skippedQuestions.length})
                         </button>
                       )}
                     </div>
@@ -435,13 +435,13 @@ const WeeklyQuestions = ({ user }) => {
           <div className="row">
             <div className="col-12">
               <div className="alert alert-success text-center">
-                <h4>:tada: Hoàn thành!</h4>
+                <h4>🎉 Hoàn thành!</h4>
                 <p>Bạn đã xem qua tất cả {weeklyData.total_questions} câu hỏi trong tuần này.</p>
                 <p>Tổng điểm nhận được: {weeklyData.completed_count * weeklyData.question_set.points_per_question} điểm</p>
                 {skippedQuestions.length > 0 && (
                   <div className="mt-3">
                     <button className="btn btn-warning me-2" onClick={handleReturnToSkippedQuestions}>
-                      :arrows_counterclockwise: Làm lại câu đã bỏ qua ({skippedQuestions.length})
+                      🔄 Làm lại câu đã bỏ qua ({skippedQuestions.length})
                     </button>
                     <button className="btn btn-outline-primary" onClick={loadWeeklyQuestions}>
                       Tải lại
@@ -462,7 +462,7 @@ const WeeklyQuestions = ({ user }) => {
             <div className="modal-dialog">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">:clipboard: Câu hỏi đã bỏ qua</h5>
+                  <h5 className="modal-title">📋 Câu hỏi đã bỏ qua</h5>
                   <button type="button" className="btn-close" onClick={handleShowSkippedQuestions}></button>
                 </div>
                 <div className="modal-body">
@@ -495,7 +495,7 @@ const WeeklyQuestions = ({ user }) => {
 
                                   setCurrentQuestion(question);
                                   setUserAnswer('');
-                                  setFeedback(':arrows_counterclockwise: Quay lại câu hỏi đã bỏ qua');
+                                  setFeedback('🔄 Quay lại câu hỏi đã bỏ qua');
                                   setShowSkippedQuestions(false);
                                 }}
                               >

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getRandomQuestion, checkAnswer, getTopics, updateDailyActivity } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -31,19 +31,6 @@ const EnglishLearning = ({ user }) => {
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-
-  // Load topics khi component được mount
-  useEffect(() => {
-    loadTopics();
-  }, []);
-
-  // Lấy câu hỏi mới khi component được mount hoặc khi thay đổi độ khó hoặc chủ đề
-  useEffect(() => {
-    if (topics.length > 0) {
-      fetchNewQuestion();
-    }
-  }, [difficulty, selectedTopic, topics.length]);
 
   const loadTopics = async () => {
     try {
@@ -54,7 +41,7 @@ const EnglishLearning = ({ user }) => {
     }
   };
 
-  const fetchNewQuestion = async () => {
+  const fetchNewQuestion = useCallback(async () => {
     setLoading(true);
     setShowResult(false);
     setUserAnswer('');
@@ -69,7 +56,7 @@ const EnglishLearning = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [difficulty, selectedTopic]);
 
   const handleSubmitAnswer = async (e) => {
     e.preventDefault();
@@ -150,7 +137,6 @@ const EnglishLearning = ({ user }) => {
       const nextWordIndex = userWords.length;
       if (nextWordIndex < correctWords.length) {
         const nextWord = correctWords[nextWordIndex];
-        setCurrentWordIndex(nextWordIndex);
 
         // If current word is partially correct, suggest completion
         if (currentWord && nextWord.toLowerCase().startsWith(currentWord.toLowerCase())) {
@@ -321,7 +307,7 @@ const EnglishLearning = ({ user }) => {
       // Get available voices and prefer English voices
       const voices = window.speechSynthesis.getVoices();
       const englishVoice = voices.find(voice =>
-        voice.lang.startsWith('en') && voice.name.includes('Google') ||
+        (voice.lang.startsWith('en') && voice.name.includes('Google')) ||
         voice.name.includes('Microsoft') ||
         voice.name.includes('Samantha') ||
         voice.name.includes('Karen')
@@ -353,6 +339,18 @@ const EnglishLearning = ({ user }) => {
       }
     }
   }, []);
+
+  // Load topics khi component được mount
+  useEffect(() => {
+    loadTopics();
+  }, []);
+
+  // Lấy câu hỏi mới khi component được mount hoặc khi thay đổi độ khó hoặc chủ đề
+  useEffect(() => {
+    if (topics.length > 0) {
+      fetchNewQuestion();
+    }
+  }, [difficulty, selectedTopic, topics.length, fetchNewQuestion]);
 
   // Inject custom styles
   useEffect(() => {
@@ -393,7 +391,7 @@ const EnglishLearning = ({ user }) => {
                       onChange={(e) => setSelectedTopic(e.target.value)}
                       style={{ minWidth: '180px', maxWidth: '250px' }}
                     >
-                      <option value="">:books: Tất cả</option>
+                      <option value="">📚 Tất cả</option>
                       {topics.map(topic => (
                         <option key={topic.id} value={topic.id}>
                           {topic.icon} {topic.name}
@@ -436,7 +434,7 @@ const EnglishLearning = ({ user }) => {
                     <div className="d-flex gap-2">
                       {question.topic_name && (
                         <span className="badge bg-info">
-                          :books: {question.topic_name}
+                          📚 {question.topic_name}
                         </span>
                       )}
                       <span className={`badge bg-${getDifficultyColor(question.difficulty)}`}>
@@ -447,7 +445,7 @@ const EnglishLearning = ({ user }) => {
                         onClick={() => speakText(question.english_text)}
                         title="Nghe đáp án đúng (gợi ý)"
                       >
-                        :loud_sound: Nghe gợi ý
+                        🔊 Nghe gợi ý
                       </button>
                     </div>
                   </div>
@@ -482,7 +480,7 @@ const EnglishLearning = ({ user }) => {
                              style={{ top: '100%', zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
                           <div className="p-2 border-bottom bg-light">
                             <small className="text-muted">
-                              :bulb: Gợi ý từ tiếp theo:
+                              💡 Gợi ý từ tiếp theo:
                             </small>
                           </div>
                           {suggestions.map((suggestion, index) => (
@@ -510,7 +508,7 @@ const EnglishLearning = ({ user }) => {
                       disabled={loading || !userAnswer.trim()}
                       title="Gợi ý từ tiếp theo"
                     >
-                      :bulb: Gợi ý
+                      💡 Gợi ý
                     </button>
                     <button
                       type="button"
@@ -536,7 +534,7 @@ const EnglishLearning = ({ user }) => {
                 <div>
                   <div className={`alert ${getResultAlertClass(result.is_correct)} mb-4`}>
                     <h5 className="alert-heading">
-                      {result.is_correct ? ':tada: Chính xác!' : ':x: Chưa chính xác'}
+                      {result.is_correct ? '🎉 Chính xác!' : '❌ Chưa chính xác'}
                     </h5>
                     <p className="mb-2">{result.message}</p>
                     <hr />
@@ -561,7 +559,7 @@ const EnglishLearning = ({ user }) => {
                             onClick={() => speakText(result.user_answer)}
                             title="Đọc câu trả lời của bạn"
                           >
-                            :loud_sound: Đọc
+                            🔊 Đọc
                           </button>
                         </div>
                         <div className="card-body">
@@ -587,7 +585,7 @@ const EnglishLearning = ({ user }) => {
                             onClick={() => speakText(result.correct_answer)}
                             title="Đọc đáp án đúng"
                           >
-                            :loud_sound: Đọc
+                            🔊 Đọc
                           </button>
                         </div>
                         <div className="card-body">
