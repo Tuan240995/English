@@ -638,7 +638,7 @@ Status: Trung bình`}
                           </p>
                           {importResult.error_count > 0 && (
                             <p className="mb-1">
-                              <strong>:x: Lỗi:</strong> {importResult.error_count} câu hỏi
+                              <strong>❌ Lỗi:</strong> {importResult.error_count} câu hỏi
                             </p>
                           )}
                           {importResult.errors && importResult.errors.length > 0 && (

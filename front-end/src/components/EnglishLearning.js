@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getRandomQuestion, checkAnswer, getTopics, updateDailyActivity } from '../services/api';
+import { getRandomQuestion, getListeningQuestion, checkAnswer, getTopics, updateDailyActivity } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Custom styles for suggestions
@@ -31,6 +31,9 @@ const EnglishLearning = ({ user }) => {
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [learningMode, setLearningMode] = useState('translation'); // 'translation' or 'listening'
+  const [speechRate, setSpeechRate] = useState(0.9); // Tốc độ phát âm (0.5 - 2.0)
+  const [showVietnameseHint, setShowVietnameseHint] = useState(false); // Hiển thị gợi ý tiếng Việt
 
   const loadTopics = async () => {
     try {
@@ -46,9 +49,15 @@ const EnglishLearning = ({ user }) => {
     setShowResult(false);
     setUserAnswer('');
     setResult(null);
+    setShowVietnameseHint(false); // Đặt lại gợi ý tiếng Việt
 
     try {
-      const newQuestion = await getRandomQuestion(difficulty, selectedTopic || null);
+      let newQuestion;
+      if (learningMode === 'listening') {
+        newQuestion = await getListeningQuestion(difficulty, selectedTopic || null);
+      } else {
+        newQuestion = await getRandomQuestion(difficulty, selectedTopic || null);
+      }
       setQuestion(newQuestion);
     } catch (error) {
       console.error('Lỗi khi lấy câu hỏi mới:', error);
@@ -56,7 +65,7 @@ const EnglishLearning = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  }, [difficulty, selectedTopic]);
+  }, [difficulty, selectedTopic, learningMode]);
 
   const handleSubmitAnswer = async (e) => {
     e.preventDefault();
@@ -197,7 +206,7 @@ const EnglishLearning = ({ user }) => {
       if (e.key === 'Tab') {
         e.preventDefault();
         handleSuggestionClick(suggestions[0]);
-      } else if (e.key === 'Escape') {
+      } else if (e.ctrlKey) {
         setShowSuggestions(false);
         setSuggestions([]);
       }
@@ -300,7 +309,7 @@ const EnglishLearning = ({ user }) => {
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-US';
-      utterance.rate = 0.9; // Slightly slower for better learning
+      utterance.rate = speechRate; // Use custom speech rate
       utterance.pitch = 1;
       utterance.volume = 1;
 
@@ -340,17 +349,56 @@ const EnglishLearning = ({ user }) => {
     }
   }, []);
 
+  // Handle keyboard events for result screen
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (showResult && e.key === 'Enter') {
+        e.preventDefault();
+        fetchNewQuestion();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showResult, fetchNewQuestion]);
+
+  // Handle keyboard events for listening mode
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Space key to play audio in listening mode (only when not typing in textarea)
+      if (learningMode === 'listening' && !showResult && e.ctrlKey) {
+        e.preventDefault();
+        if (question && question.english_text) {
+          speakText(question.english_text);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [learningMode, showResult, question, speakText]);
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('showVietnameseHint changed:', showVietnameseHint);
+    console.log('question vietnamese:', question?.vietnamese_text);
+  }, [showVietnameseHint, question]);
+
   // Load topics khi component được mount
   useEffect(() => {
     loadTopics();
   }, []);
 
-  // Lấy câu hỏi mới khi component được mount hoặc khi thay đổi độ khó hoặc chủ đề
+  // Lấy câu hỏi mới khi component được mount hoặc khi thay đổi độ khó, chủ đề, hoặc mode
   useEffect(() => {
     if (topics.length > 0) {
       fetchNewQuestion();
     }
-  }, [difficulty, selectedTopic, topics.length, fetchNewQuestion]);
+  }, [difficulty, selectedTopic, topics.length, learningMode]);
 
   // Inject custom styles
   useEffect(() => {
@@ -372,6 +420,42 @@ const EnglishLearning = ({ user }) => {
               <h2 className="text-center mb-0">Học Tiếng Anh</h2>
             </div>
             <div className="card-body">
+              {/* Mode Selection */}
+              <div className="row mb-3">
+                <div className="col-12">
+                  <div className="d-flex justify-content-center align-items-center gap-3">
+                    <span className="fw-bold">Chế độ học:</span>
+                    <div className="btn-group" role="group">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="learningMode"
+                        id="translationMode"
+                        value="translation"
+                        checked={learningMode === 'translation'}
+                        onChange={(e) => setLearningMode(e.target.value)}
+                      />
+                      <label className="btn btn-outline-primary" htmlFor="translationMode">
+                        📝 Dịch câu
+                      </label>
+
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="learningMode"
+                        id="listeningMode"
+                        value="listening"
+                        checked={learningMode === 'listening'}
+                        onChange={(e) => setLearningMode(e.target.value)}
+                      />
+                      <label className="btn btn-outline-success" htmlFor="listeningMode">
+                        🎧 Nghe-viết
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Điểm số và điều khiển */}
               <div className="row mb-3">
                 <div className="col-md-3">
@@ -417,6 +501,67 @@ const EnglishLearning = ({ user }) => {
                 </div>
               </div>
 
+              {/* Tốc độ phát âm (chỉ hiển thị ở mode nghe-viết) */}
+              {learningMode === 'listening' && (
+                <div className="row mb-3">
+                  <div className="col-12">
+                    <div className="d-flex justify-content-center align-items-center gap-3">
+                      <span className="fw-bold">Tốc độ phát âm:</span>
+                      <div className="d-flex align-items-center gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => setSpeechRate(0.5)}
+                          title="Rất chậm (0.5x)"
+                        >
+                          🐌
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => setSpeechRate(0.7)}
+                          title="Chậm (0.7x)"
+                        >
+                          🚶
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => setSpeechRate(0.9)}
+                          title="Bình thường (0.9x)"
+                        >
+                          🚶‍♂️
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => setSpeechRate(1.1)}
+                          title="Nhanh (1.1x)"
+                        >
+                          🚶‍♀️
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => setSpeechRate(1.3)}
+                          title="Nhanh (1.3x)"
+                        >
+                          🏃
+                        </button>
+                        <div className="d-flex align-items-center gap-2 ms-3">
+                          <input
+                            type="range"
+                            className="form-range"
+                            min="0.5"
+                            max="1.5"
+                            step="0.1"
+                            value={speechRate}
+                            onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                            style={{ width: '150px' }}
+                          />
+                          <span className="badge bg-secondary">{speechRate.toFixed(1)}x</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Loading */}
               {loading && (
                 <div className="text-center my-4">
@@ -430,7 +575,9 @@ const EnglishLearning = ({ user }) => {
               {question && !loading && (
                 <div className="mb-4">
                   <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h5 className="mb-0">Dịch câu sau sang tiếng Anh:</h5>
+                    <h5 className="mb-0">
+                      {learningMode === 'listening' ? 'Nghe câu sau và viết lại:' : 'Dịch câu sau sang tiếng Anh:'}
+                    </h5>
                     <div className="d-flex gap-2">
                       {question.topic_name && (
                         <span className="badge bg-info">
@@ -440,18 +587,58 @@ const EnglishLearning = ({ user }) => {
                       <span className={`badge bg-${getDifficultyColor(question.difficulty)}`}>
                         {getDifficultyText(question.difficulty)}
                       </span>
-                      <button
-                        className="btn btn-sm btn-outline-info"
-                        onClick={() => speakText(question.english_text)}
-                        title="Nghe đáp án đúng (gợi ý)"
-                      >
-                        🔊 Nghe gợi ý
-                      </button>
+                      {learningMode === 'listening' ? (
+                        <button
+                          className="btn btn-sm btn-info"
+                          onClick={() => setShowVietnameseHint(!showVietnameseHint)}
+                          title="Hiển thị/ẩn câu dịch tiếng Việt"
+                        >
+                          💡 Hiện tiếng việt
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-sm btn-outline-info"
+                          onClick={() => speakText(question.english_text)}
+                          title="Nghe đáp án đúng (gợi ý)"
+                        >
+                          🔊 Nghe gợi ý
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="alert alert-light border border-primary">
-                    <h4 className="text-center mb-0">{question.vietnamese_text}</h4>
-                  </div>
+                  {learningMode === 'listening' ? (
+                    <div className="alert alert-success border border-success text-center">
+                      <div className="mb-3">
+                        <button
+                          className="btn btn-lg btn-success"
+                          onClick={() => speakText(question.english_text)}
+                          title="Nhấn để nghe câu (hoặc nhấn phím Space)"
+                        >
+                          <i className="bi bi-play-circle-fill me-2"></i>
+                          🔊 Nghe câu
+                        </button>
+                      </div>
+                      <p className="mb-0 text-muted">
+                        <small>Nhấn vào nút trên để nghe câu tiếng Anh, sau đó viết lại câu bạn đã nghe</small>
+                      </p>
+
+                      {showVietnameseHint && (
+                        <div className="mt-3 p-3 bg-light rounded border">
+                          <h6 className="mb-2 text-primary">
+                            <i className="bi bi-lightbulb me-2"></i>
+                            Câu Tiếng Việt:
+                          </h6>
+                          <p className="mb-0">
+                            <strong>{question.vietnamese_text || 'Đang tải câu dịch...'}</strong>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="alert alert-light border border-primary">
+                      <h4 className="text-center mb-0">{question.vietnamese_text}</h4>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -469,8 +656,15 @@ const EnglishLearning = ({ user }) => {
                         rows="3"
                         value={userAnswer}
                         onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Nhập câu tiếng Anh tương ứng..."
+                        onKeyDown={(e) => {
+                          handleKeyDown(e);
+                          // Xử lý phím Enter để submit form
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSubmitAnswer(e);
+                          }
+                        }}
+                        placeholder={learningMode === 'listening' ? "Viết lại câu tiếng Anh bạn đã nghe..." : "Nhập câu tiếng Anh tương ứng..."}
                         autoFocus
                       />
 
@@ -534,7 +728,7 @@ const EnglishLearning = ({ user }) => {
                 <div>
                   <div className={`alert ${getResultAlertClass(result.is_correct)} mb-4`}>
                     <h5 className="alert-heading">
-                      {result.is_correct ? '🎉 Chính xác!' : '❌ Chưa chính xác'}
+                      {result.is_correct ? '🥳: Chính xác!' : '❌ Chưa chính xác'}
                     </h5>
                     <p className="mb-2">{result.message}</p>
                     <hr />
