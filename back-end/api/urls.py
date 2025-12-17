@@ -33,4 +33,12 @@ urlpatterns = [
     path('weekly-questions/sets/', views.WeeklyQuestionSetListView.as_view(), name='weekly_question_sets'),
     path('weekly-questions/progress/', views.WeeklyQuestionProgressView.as_view(), name='weekly_question_progress'),
     path('weekly-questions/', views.WeeklyQuestionListView.as_view(), name='weekly_questions'),
+
+    # Daily learning system endpoints
+    path('daily-learning/dashboard/', views.DailyLearningDashboardView.as_view(), name='daily_learning_dashboard'),
+    path('daily-learning/sessions/', views.DailyLearningSessionView.as_view(), name='daily_learning_sessions'),
+    path('daily-learning/answer/', views.DailyLearningAnswerView.as_view(), name='daily_learning_answer'),
+    path('daily-learning/reset-session/', views.DailyLearningResetSessionView.as_view(), name='daily_learning_reset_session'),
+    path('daily-learning/settings/', views.DailyLearningSettingsView.as_view(), name='daily_learning_settings'),
+    path('daily-learning/history/', views.DailyLearningHistoryView.as_view(), name='daily_learning_history'),
 ]

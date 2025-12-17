@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Question, UserAnswer, Topic, WeeklyTask, UserTaskProgress, DailyTaskCompletion, UserPoints, WeeklyQuestionSet, WeeklyQuestionProgress
+from .models import (
+    Question, UserAnswer, Topic, WeeklyTask, UserTaskProgress, DailyTaskCompletion,
+    UserPoints, WeeklyQuestionSet, WeeklyQuestionProgress, DailyLearningSession,
+    DailyLearningQuestion, DailyLearningStreak, DailyLearningSettings
+)
 
 
 class TopicSerializer(serializers.ModelSerializer):
@@ -303,3 +307,159 @@ class WeeklyQuestionDetailSerializer(serializers.ModelSerializer):
         if remaining:
             return QuestionSimpleSerializer(remaining).data
         return None
+
+
+# Daily Learning System Serializers
+class DailyLearningSessionSerializer(serializers.ModelSerializer):
+    """Serializer for DailyLearningSession model"""
+    exercise_type_display = serializers.CharField(source='get_exercise_type_display', read_only=True)
+    progress_percentage = serializers.SerializerMethodField()
+    accuracy_rate = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DailyLearningSession
+        fields = [
+            'id', 'user', 'session_date', 'exercise_type', 'exercise_type_display',
+            'target_questions', 'completed_questions', 'correct_answers',
+            'progress_percentage', 'accuracy_rate', 'points_earned', 'is_completed',
+            'completed_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_progress_percentage(self, obj):
+        return obj.get_progress_percentage()
+
+    def get_accuracy_rate(self, obj):
+        return obj.get_accuracy_rate()
+
+
+class DailyLearningQuestionSerializer(serializers.ModelSerializer):
+    """Serializer for DailyLearningQuestion model"""
+    vietnamese_text = serializers.CharField(source='question.vietnamese_text', read_only=True)
+    correct_answer = serializers.CharField(source='question.english_text', read_only=True)
+    question_difficulty = serializers.CharField(source='question.difficulty', read_only=True)
+    topic_name = serializers.CharField(source='question.topic.name', read_only=True)
+
+    class Meta:
+        model = DailyLearningQuestion
+        fields = [
+            'id', 'session', 'question', 'vietnamese_text', 'correct_answer',
+            'user_answer', 'is_correct', 'similarity_score', 'time_taken',
+            'attempts', 'question_difficulty', 'topic_name', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class DailyLearningStreakSerializer(serializers.ModelSerializer):
+    """Serializer for DailyLearningStreak model"""
+    streak_emoji = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DailyLearningStreak
+        fields = [
+            'id', 'user', 'current_streak', 'longest_streak', 'last_learning_date',
+            'total_days_learned', 'streak_emoji', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_streak_emoji(self, obj):
+        """Get emoji based on current streak"""
+        if obj.current_streak >= 30:
+            return ":fire::fire::fire:"
+        elif obj.current_streak >= 14:
+            return ":fire::fire:"
+        elif obj.current_streak >= 7:
+            return ":fire:"
+        elif obj.current_streak >= 3:
+            return ":star:"
+        elif obj.current_streak >= 1:
+            return "✅"
+        else:
+            return ":x:"
+
+
+class DailyLearningSettingsSerializer(serializers.ModelSerializer):
+    """Serializer for DailyLearningSettings model"""
+    preferred_topics_data = TopicSerializer(source='preferred_topics', many=True, read_only=True)
+    exercise_types_list = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DailyLearningSettings
+        fields = [
+            'id', 'user', 'daily_target', 'preferred_difficulty', 'preferred_topics',
+            'preferred_topics_data', 'exercise_types', 'exercise_types_list',
+            'reminder_enabled', 'reminder_time', 'auto_play_audio', 'speech_rate',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_exercise_types_list(self, obj):
+        return obj.get_exercise_types_list()
+
+
+class DailyLearningSessionDetailSerializer(DailyLearningSessionSerializer):
+    """Detailed serializer for daily learning session with questions"""
+    session_questions = DailyLearningQuestionSerializer(many=True, read_only=True)
+    next_question = serializers.SerializerMethodField()
+
+    class Meta(DailyLearningSessionSerializer.Meta):
+        fields = DailyLearningSessionSerializer.Meta.fields + ['session_questions', 'next_question']
+
+    def get_next_question(self, obj):
+        """Get next question for the session"""
+        if obj.completed_questions >= obj.target_questions:
+            return None
+
+        # Get questions not yet answered in this session
+        answered_question_ids = obj.session_questions.values_list('question_id', flat=True)
+
+        # Filter questions based on user settings
+        from .models import Question
+        questions = Question.objects.all()
+
+        # Apply difficulty filter
+        user_settings = obj.user.daily_learning_settings.first()
+        if user_settings:
+            questions = questions.filter(difficulty=user_settings.preferred_difficulty)
+
+            # Apply topic filter if user has preferred topics
+            preferred_topics = user_settings.preferred_topics.all()
+            if preferred_topics.exists():
+                questions = questions.filter(topic__in=preferred_topics)
+
+        # Exclude already answered questions
+        questions = questions.exclude(id__in=answered_question_ids)
+
+        # Handle mixed exercise type - 50% listening, 50% translation
+        if obj.exercise_type == 'mixed':
+            # Determine if this should be a listening or translation question
+            # Alternate between listening and translation
+            is_listening = obj.completed_questions % 2 == 0
+
+            # For mixed type, we need to track the exercise type for each question
+            # We'll use a simple alternating pattern
+            if questions.exists():
+                import random
+                question = random.choice(questions)
+                question_data = QuestionSimpleSerializer(question).data
+                # Add exercise type hint for the frontend
+                question_data['exercise_subtype'] = 'listening' if is_listening else 'translation'
+                return question_data
+        else:
+            # For non-mixed types, just get a random question
+            if questions.exists():
+                import random
+                question = random.choice(questions)
+                return QuestionSimpleSerializer(question).data
+
+        return None
+
+
+class DailyLearningDashboardSerializer(serializers.Serializer):
+    """Serializer for daily learning dashboard data"""
+    today_sessions = DailyLearningSessionSerializer(many=True)
+    learning_streak = DailyLearningStreakSerializer()
+    user_settings = DailyLearningSettingsSerializer()
+    weekly_stats = serializers.DictField()
+    monthly_stats = serializers.DictField()
+    achievements = serializers.ListField()

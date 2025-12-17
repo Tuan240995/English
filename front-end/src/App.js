@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import EnglishLearning from './components/EnglishLearning';
+import DailyLearning from './components/DailyLearning';
 import QuestionManager from './components/QuestionManager';
 import History from './components/History';
 import TaskDashboard from './components/TaskDashboard';
@@ -19,22 +20,18 @@ function AppContent() {
   const handleLogin = (userData, isNew) => {
     setUser(userData);
     setIsNewUser(isNew);
-    // Navigate to learning page after login
     navigate('/hoc-tap');
   };
 
   const handleLogout = () => {
     setUser(null);
     setIsNewUser(false);
-    // Clear token and user data from localStorage
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     localStorage.removeItem('currentPage');
-    // Navigate to home
     navigate('/');
   };
 
-  // Check token on component mount
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const savedUser = localStorage.getItem('user');
@@ -46,13 +43,11 @@ function AppContent() {
         setIsNewUser(false);
       } catch (error) {
         console.error('Error parsing saved user:', error);
-        // Clear invalid data
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         localStorage.removeItem('currentPage');
       }
     } else {
-      // No token found, clear any remaining user data
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
       localStorage.removeItem('currentPage');
@@ -63,14 +58,12 @@ function AppContent() {
     return location.pathname === path ? 'nav-link active' : 'nav-link';
   };
 
-  // Nếu chưa đăng nhập, chỉ hiển thị login page
   if (!user) {
     return <UserLogin onLogin={handleLogin} />;
   }
 
   return (
     <div className="App">
-      {/* Navigation - chỉ hiển thị khi đã đăng nhập */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
         <div className="container">
           <a className="navbar-brand" href="/hoc-tap" onClick={(e) => { e.preventDefault(); navigate('/hoc-tap'); }}>
@@ -93,13 +86,24 @@ function AppContent() {
             <ul className="navbar-nav ms-auto">
               <li className="nav-item">
                 <a
+                  href="/hoc-tap-hang-ngay"
+                  className={`btn ${getNavLinkClass('/hoc-tap-hang-ngay')}`}
+                  onClick={(e) => { e.preventDefault(); navigate('/hoc-tap-hang-ngay'); }}
+                >
+                  📚 Học tập hàng ngày
+                </a>
+              </li>
+
+              <li className="nav-item">
+                <a
                   href="/hoc-tap"
                   className={`btn ${getNavLinkClass('/hoc-tap')}`}
                   onClick={(e) => { e.preventDefault(); navigate('/hoc-tap'); }}
                 >
-                  🎯 Học tập
+                  🎯 Học tập tự do
                 </a>
               </li>
+
               <li className="nav-item">
                 <a
                   href="/quanlycauhoi"
@@ -109,6 +113,7 @@ function AppContent() {
                   ⚙️ Quản lý câu hỏi
                 </a>
               </li>
+
               <li className="nav-item">
                 <a
                   href="/lichsu"
@@ -118,6 +123,7 @@ function AppContent() {
                   📊 Lịch sử
                 </a>
               </li>
+
               <li className="nav-item">
                 <a
                   href="/nhiemvu"
@@ -127,6 +133,7 @@ function AppContent() {
                   🎯 Nhiệm vụ
                 </a>
               </li>
+
               <li className="nav-item">
                 <a
                   href="/cauhoituan"
@@ -136,6 +143,7 @@ function AppContent() {
                   📝 Câu hỏi tuần
                 </a>
               </li>
+
               <li className="nav-item">
                 <button
                   className="btn btn-outline-light"
@@ -149,7 +157,6 @@ function AppContent() {
         </div>
       </nav>
 
-      {/* Welcome Message */}
       {isNewUser && (
         <div className="welcome-message">
           <div className="container">
@@ -161,16 +168,16 @@ function AppContent() {
         </div>
       )}
 
-      {/* Main Content */}
       <main>
         <Routes>
-          <Route path="/" element={<Navigate to="/hoc-tap" replace />} />
+          <Route path="/" element={<Navigate to="/hoc-tap-hang-ngay" replace />} />
+          <Route path="/hoc-tap-hang-ngay" element={<DailyLearning user={user} />} />
           <Route path="/hoc-tap" element={<EnglishLearning user={user} />} />
           <Route path="/quanlycauhoi" element={<QuestionManager user={user} />} />
           <Route path="/lichsu" element={<History user={user} />} />
           <Route path="/nhiemvu" element={<TaskDashboard user={user} />} />
           <Route path="/cauhoituan" element={<WeeklyQuestions user={user} />} />
-          <Route path="*" element={<Navigate to="/hoc-tap" replace />} />
+          <Route path="*" element={<Navigate to="/hoc-tap-hang-ngay" replace />} />
         </Routes>
       </main>
     </div>

@@ -10,15 +10,23 @@ import re
 
 from django.contrib.auth.models import User
 from django.db import models
-from .models import Question, UserAnswer, Topic, WeeklyTask, UserTaskProgress, DailyTaskCompletion, UserPoints, WeeklyQuestionSet, WeeklyQuestionProgress
+from .models import (
+    Question, UserAnswer, Topic, WeeklyTask, UserTaskProgress, DailyTaskCompletion,
+    UserPoints, WeeklyQuestionSet, WeeklyQuestionProgress, DailyLearningSession,
+    DailyLearningQuestion, DailyLearningStreak, DailyLearningSettings
+)
 from .serializers import (
     QuestionSerializer, QuestionSimpleSerializer,
     CheckAnswerSerializer, CheckAnswerResponseSerializer, TopicSerializer,
     UserSerializer, UserLoginSerializer, UserAnswerWithUserSerializer,
     WeeklyTaskSerializer, UserTaskProgressSerializer, DailyTaskCompletionSerializer,
     UserPointsSerializer, TaskDashboardSerializer, WeeklyQuestionSetSerializer,
-    WeeklyQuestionProgressSerializer, WeeklyQuestionDetailSerializer
+    WeeklyQuestionProgressSerializer, WeeklyQuestionDetailSerializer,
+    DailyLearningSessionSerializer, DailyLearningQuestionSerializer,
+    DailyLearningStreakSerializer, DailyLearningSettingsSerializer,
+    DailyLearningSessionDetailSerializer, DailyLearningDashboardSerializer
 )
+
 
 
 def calculate_similarity(text1, text2):
@@ -1097,3 +1105,568 @@ class WeeklyQuestionListView(views.APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+# Daily Learning System Views
+class DailyLearningDashboardView(views.APIView):
+    """Get daily learning dashboard data"""
+
+    def get(self, request):
+        """Get comprehensive daily learning dashboard"""
+        try:
+            username = request.GET.get('username', '')
+            if not username:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+
+            # Get today's date
+            from django.utils import timezone
+            today = timezone.now().date()
+
+            # Get or create user settings
+            user_settings, created = DailyLearningSettings.objects.get_or_create(
+                user=user,
+                defaults={
+                    'daily_target': 10,
+                    'preferred_difficulty': 'medium',
+                    'exercise_types': 'translation,listening'
+                }
+            )
+
+            # Get or create learning streak
+            learning_streak, created = DailyLearningStreak.objects.get_or_create(
+                user=user,
+                defaults={
+                    'current_streak': 0,
+                    'longest_streak': 0,
+                    'total_days_learned': 0
+                }
+            )
+
+            # Get today's sessions
+            today_sessions = DailyLearningSession.objects.filter(
+                user=user,
+                session_date=today
+            ).order_by('created_at')
+
+            # Calculate weekly stats
+            week_start = today - timezone.timedelta(days=today.weekday())
+            weekly_sessions = DailyLearningSession.objects.filter(
+                user=user,
+                session_date__gte=week_start
+            )
+
+            weekly_stats = {
+                'total_sessions': weekly_sessions.count(),
+                'total_questions': weekly_sessions.aggregate(
+                    total=models.Sum('completed_questions'))['total'] or 0,
+                'correct_answers': weekly_sessions.aggregate(
+                    correct=models.Sum('correct_answers'))['correct'] or 0,
+                'points_earned': weekly_sessions.aggregate(
+                    points=models.Sum('points_earned'))['points'] or 0,
+                'days_active': weekly_sessions.values('session_date').distinct().count()
+            }
+
+            # Calculate monthly stats
+            month_start = today.replace(day=1)
+            monthly_sessions = DailyLearningSession.objects.filter(
+                user=user,
+                session_date__gte=month_start
+            )
+
+            monthly_stats = {
+                'total_sessions': monthly_sessions.count(),
+                'total_questions': monthly_sessions.aggregate(
+                    total=models.Sum('completed_questions'))['total'] or 0,
+                'correct_answers': monthly_sessions.aggregate(
+                    correct=models.Sum('correct_answers'))['correct'] or 0,
+                'points_earned': monthly_sessions.aggregate(
+                    points=models.Sum('points_earned'))['points'] or 0,
+                'days_active': monthly_sessions.values('session_date').distinct().count()
+            }
+
+            # Generate achievements
+            achievements = self._generate_achievements(user, learning_streak, user_settings)
+
+            response_data = {
+                'today_sessions': DailyLearningSessionSerializer(today_sessions, many=True).data,
+                'learning_streak': DailyLearningStreakSerializer(learning_streak).data,
+                'user_settings': DailyLearningSettingsSerializer(user_settings).data,
+                'weekly_stats': weekly_stats,
+                'monthly_stats': monthly_stats,
+                'achievements': achievements
+            }
+
+            return Response(response_data)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi lấy dashboard học tập: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _generate_achievements(self, user, learning_streak, settings):
+        """Generate user achievements based on progress"""
+        achievements = []
+
+        # Streak achievements
+        if learning_streak.current_streak >= 30:
+            achievements.append({
+                'id': 'streak_30',
+                'title': ':fire::fire::fire: Huyền thoại',
+                'description': 'Học tập liên tục 30 ngày',
+                'earned': True
+            })
+        elif learning_streak.current_streak >= 14:
+            achievements.append({
+                'id': 'streak_14',
+                'title': ':fire::fire: Bậc thầy',
+                'description': 'Học tập liên tục 14 ngày',
+                'earned': True
+            })
+        elif learning_streak.current_streak >= 7:
+            achievements.append({
+                'id': 'streak_7',
+                'title': ':fire: Kiên trì',
+                'description': 'Học tập liên tục 7 ngày',
+                'earned': True
+            })
+
+        # Total days achievements
+        if learning_streak.total_days_learned >= 100:
+            achievements.append({
+                'id': 'days_100',
+                'title': ':100: Trăm ngày',
+                'description': 'Học tập tổng cộng 100 ngày',
+                'earned': True
+            })
+        elif learning_streak.total_days_learned >= 50:
+            achievements.append({
+                'id': 'days_50',
+                'title': ':star2: Nửa chặng đường',
+                'description': 'Học tập tổng cộng 50 ngày',
+                'earned': True
+            })
+
+        return achievements
+
+
+class DailyLearningSessionView(views.APIView):
+    """Create and manage daily learning sessions"""
+
+    def post(self, request):
+        """Start a new daily learning session"""
+        try:
+            username = request.data.get('username', '')
+            exercise_type = request.data.get('exercise_type', 'mixed')
+            target_questions = request.data.get('target_questions', 10)
+
+            if not username:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+
+            # Get today's date
+            from django.utils import timezone
+            today = timezone.now().date()
+
+            # Check if session already exists for today and exercise type
+            existing_session = DailyLearningSession.objects.filter(
+                user=user,
+                session_date=today,
+                exercise_type=exercise_type
+            ).first()
+
+            if existing_session:
+                return Response({
+                    'message': 'Bạn đã có buổi học hôm nay cho loại bài tập này',
+                    'session': DailyLearningSessionDetailSerializer(existing_session).data
+                })
+
+            # Get user settings for target questions
+            user_settings = user.daily_learning_settings.first()
+            if user_settings:
+                target_questions = user_settings.daily_target
+
+            # Create new session
+            session = DailyLearningSession.objects.create(
+                user=user,
+                session_date=today,
+                exercise_type=exercise_type,
+                target_questions=target_questions
+            )
+
+            # Update learning streak
+            learning_streak, created = DailyLearningStreak.objects.get_or_create(
+                user=user,
+                defaults={
+                    'current_streak': 0,
+                    'longest_streak': 0,
+                    'total_days_learned': 0
+                }
+            )
+            learning_streak.update_streak(today)
+
+            return Response({
+                'message': 'Bắt đầu buổi học thành công!',
+                'session': DailyLearningSessionDetailSerializer(session).data
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi bắt đầu buổi học: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def get(self, request):
+        """Get current learning session"""
+        try:
+            username = request.GET.get('username', '')
+            exercise_type = request.GET.get('exercise_type', '')
+
+            if not username:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+
+            # Get today's date
+            from django.utils import timezone
+            today = timezone.now().date()
+
+            # Filter sessions
+            sessions = DailyLearningSession.objects.filter(
+                user=user,
+                session_date=today
+            )
+
+            if exercise_type:
+                sessions = sessions.filter(exercise_type=exercise_type)
+
+            sessions = sessions.order_by('created_at')
+
+            if not sessions.exists():
+                return Response({
+                    'message': 'Chưa có buổi học nào hôm nay',
+                    'sessions': []
+                })
+
+            session_data = []
+            for session in sessions:
+                session_data.append(DailyLearningSessionDetailSerializer(session).data)
+
+            return Response({
+                'sessions': session_data,
+                'total_sessions': len(session_data)
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi lấy buổi học: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DailyLearningAnswerView(views.APIView):
+    """Submit answers for daily learning sessions"""
+
+    def post(self, request):
+        """Submit answer for a learning session"""
+        try:
+            username = request.data.get('username', '')
+            session_id = request.data.get('session_id', '')
+            question_id = request.data.get('question_id', '')
+            user_answer = request.data.get('user_answer', '')
+            time_taken = request.data.get('time_taken', 0)
+
+            if not username or not session_id or not question_id or not user_answer:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username, session_id, question_id và user_answer'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+            session = get_object_or_404(DailyLearningSession, id=session_id, user=user)
+            question = get_object_or_404(Question, id=question_id)
+
+            # Check if session is already completed
+            if session.is_completed:
+                return Response(
+                    {'error': 'Buổi học đã kết thúc'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Check if question already answered in this session
+            existing_answer = DailyLearningQuestion.objects.filter(
+                session=session,
+                question=question
+            ).first()
+
+            if existing_answer:
+                # Update existing answer
+                existing_answer.user_answer = user_answer
+                existing_answer.attempts += 1
+                existing_answer.time_taken += time_taken
+            else:
+                # Create new answer
+                existing_answer = DailyLearningQuestion.objects.create(
+                    session=session,
+                    question=question,
+                    user_answer=user_answer,
+                    time_taken=time_taken
+                )
+
+            # Calculate similarity
+            similarity = calculate_similarity(user_answer, question.english_text)
+            is_correct = similarity > 0.8
+
+            # Update answer record
+            existing_answer.is_correct = is_correct
+            existing_answer.similarity_score = similarity
+            existing_answer.save()
+
+            # Update session progress
+            if is_correct:
+                session.correct_answers += 1
+
+            session.completed_questions += 1
+
+            # Calculate points for this answer based on similarity percentage
+            # Points range: 1-10 points based on accuracy (0.1 to 1.0 similarity)
+            points_for_this_answer = max(1, int(similarity * 10))  # Min 1 point, max 10 points
+            session.points_earned += points_for_this_answer
+
+            # Check if session is completed
+            if session.completed_questions >= session.target_questions:
+                session.mark_completed()
+
+            session.save()
+
+            # Update user points
+            user_points, _ = UserPoints.objects.get_or_create(user=user)
+            user_points.total_points += points_for_this_answer
+            user_points.weekly_points += points_for_this_answer
+            user_points.save()
+
+            return Response({
+                'message': 'Nộp bài thành công!',
+                'is_correct': is_correct,
+                'similarity_score': round(similarity, 2),
+                'correct_answer': question.english_text,
+                'feedback': get_feedback_message(similarity),
+                'session_progress': {
+                    'completed_questions': session.completed_questions,
+                    'target_questions': session.target_questions,
+                    'correct_answers': session.correct_answers,
+                    'points_earned': session.points_earned,
+                    'is_completed': session.is_completed,
+                    'progress_percentage': session.get_progress_percentage(),
+                    'accuracy_rate': session.get_accuracy_rate()
+                }
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi nộp bài: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DailyLearningSettingsView(views.APIView):
+    """Manage daily learning settings"""
+
+    def get(self, request):
+        """Get user learning settings"""
+        try:
+            username = request.GET.get('username', '')
+            if not username:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+            settings, created = DailyLearningSettings.objects.get_or_create(
+                user=user,
+                defaults={
+                    'daily_target': 10,
+                    'preferred_difficulty': 'medium',
+                    'exercise_types': 'translation,listening'
+                }
+            )
+
+            return Response(DailyLearningSettingsSerializer(settings).data)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi lấy cài đặt: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def put(self, request):
+        """Update user learning settings"""
+        try:
+            username = request.data.get('username', '')
+            if not username:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+            settings, created = DailyLearningSettings.objects.get_or_create(user=user)
+
+            # Update settings
+            if 'daily_target' in request.data:
+                settings.daily_target = int(request.data['daily_target'])
+            if 'preferred_difficulty' in request.data:
+                settings.preferred_difficulty = request.data['preferred_difficulty']
+            if 'preferred_topics' in request.data:
+                topic_ids = request.data['preferred_topics']
+                settings.preferred_topics.set(topic_ids)
+            if 'exercise_types' in request.data:
+                if isinstance(request.data['exercise_types'], list):
+                    settings.set_exercise_types_list(request.data['exercise_types'])
+                else:
+                    settings.exercise_types = request.data['exercise_types']
+            if 'reminder_enabled' in request.data:
+                settings.reminder_enabled = request.data['reminder_enabled']
+            if 'reminder_time' in request.data:
+                settings.reminder_time = request.data['reminder_time']
+            if 'auto_play_audio' in request.data:
+                settings.auto_play_audio = request.data['auto_play_audio']
+            if 'speech_rate' in request.data:
+                settings.speech_rate = float(request.data['speech_rate'])
+
+            settings.save()
+
+            return Response({
+                'message': 'Cập nhật cài đặt thành công',
+                'settings': DailyLearningSettingsSerializer(settings).data
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi cập nhật cài đặt: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DailyLearningResetSessionView(views.APIView):
+    """Reset a daily learning session"""
+
+    @csrf_exempt
+    def post(self, request):
+        """Reset a learning session"""
+        try:
+            username = request.data.get('username', '')
+            session_id = request.data.get('session_id', '')
+
+            if not username or not session_id:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username và session_id'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+            session = get_object_or_404(DailyLearningSession, id=session_id, user=user)
+
+            # Delete all questions for this session
+            DailyLearningQuestion.objects.filter(session=session).delete()
+
+            # Reset session progress
+            session.completed_questions = 0
+            session.correct_answers = 0
+            session.points_earned = 0
+            session.is_completed = False
+            session.completed_at = None
+            session.save()
+
+            return Response({
+                'message': 'Làm lại buổi học thành công!',
+                'session': DailyLearningSessionDetailSerializer(session).data
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi làm lại buổi học: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class DailyLearningHistoryView(views.APIView):
+    """Get daily learning history"""
+
+    def get(self, request):
+        """Get user's learning history"""
+        try:
+            username = request.GET.get('username', '')
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 20))
+            days = int(request.GET.get('days', 30))  # Default last 30 days
+
+            if not username:
+                return Response(
+                    {'error': 'Vui lòng cung cấp username'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user = get_object_or_404(User, username=username)
+
+            # Calculate date range
+            from django.utils import timezone
+            end_date = timezone.now().date()
+            start_date = end_date - timezone.timedelta(days=days)
+
+            # Get sessions
+            sessions = DailyLearningSession.objects.filter(
+                user=user,
+                session_date__gte=start_date,
+                session_date__lte=end_date
+            ).order_by('-session_date', '-created_at')
+
+            # Get total count
+            total_count = sessions.count()
+
+            # Calculate pagination
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            paginated_sessions = sessions[start_index:end_index]
+
+            # Serialize
+            serializer = DailyLearningSessionDetailSerializer(paginated_sessions, many=True)
+
+            # Calculate pagination info
+            total_pages = (total_count + page_size - 1) // page_size
+            has_next = page < total_pages
+            has_previous = page > 1
+
+            return Response({
+                'results': serializer.data,
+                'count': total_count,
+                'next': page + 1 if has_next else None,
+                'previous': page - 1 if has_previous else None,
+                'total_pages': total_pages,
+                'current_page': page,
+                'page_size': page_size,
+                'has_next': has_next,
+                'has_previous': has_previous,
+                'date_range': {
+                    'start_date': start_date.strftime('%Y-%m-%d'),
+                    'end_date': end_date.strftime('%Y-%m-%d'),
+                    'days': days
+                }
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Lỗi khi lấy lịch sử học tập: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

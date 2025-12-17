@@ -310,3 +310,194 @@ class WeeklyQuestionProgress(models.Model):
                 self.completed_at = timezone.now()
 
             self.save()
+
+
+class DailyLearningSession(models.Model):
+    """Daily learning sessions for users"""
+    EXERCISE_TYPES = [
+        ('translation', 'Dịch câu'),
+        ('listening', 'Nghe-viết'),
+        ('mixed', 'Kết hợp'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='daily_learning_sessions'
+    )
+    session_date = models.DateField(help_text="Ngày học tập")
+    exercise_type = models.CharField(
+        max_length=20,
+        choices=EXERCISE_TYPES,
+        default='mixed'
+    )
+    target_questions = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text="Số câu hỏi mục tiêu"
+    )
+    completed_questions = models.IntegerField(default=0)
+    correct_answers = models.IntegerField(default=0)
+    points_earned = models.IntegerField(default=0)
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Daily Learning Session"
+        verbose_name_plural = "Daily Learning Sessions"
+        unique_together = ['user', 'session_date', 'exercise_type']
+        ordering = ['-session_date']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.session_date} - {self.get_exercise_type_display()}"
+
+    def get_progress_percentage(self):
+        if self.target_questions == 0:
+            return 0
+        return (self.completed_questions / self.target_questions) * 100
+
+    def get_accuracy_rate(self):
+        if self.completed_questions == 0:
+            return 0
+        return (self.correct_answers / self.completed_questions) * 100
+
+    def mark_completed(self):
+        """Mark session as completed"""
+        if not self.is_completed:
+            self.is_completed = True
+            self.completed_at = timezone.now()
+            self.save()
+
+
+class DailyLearningQuestion(models.Model):
+    """Questions used in daily learning sessions"""
+    session = models.ForeignKey(
+        DailyLearningSession,
+        on_delete=models.CASCADE,
+        related_name='session_questions'
+    )
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name='daily_session_questions'
+    )
+    user_answer = models.TextField()
+    is_correct = models.BooleanField(default=False)
+    similarity_score = models.FloatField(default=0.0)
+    time_taken = models.IntegerField(
+        default=0,
+        help_text="Thời gian trả lời (giây)"
+    )
+    attempts = models.IntegerField(default=1)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Daily Learning Question"
+        verbose_name_plural = "Daily Learning Questions"
+        unique_together = ['session', 'question']
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.session.user.username} - {self.question.vietnamese_text[:30]}... - Correct: {self.is_correct}"
+
+
+class DailyLearningStreak(models.Model):
+    """Track daily learning streaks"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='learning_streaks'
+    )
+    current_streak = models.IntegerField(default=0, help_text="Chuỗi học tập hiện tại")
+    longest_streak = models.IntegerField(default=0, help_text="Chuỗi học tập dài nhất")
+    last_learning_date = models.DateField(null=True, blank=True)
+    total_days_learned = models.IntegerField(default=0)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Daily Learning Streak"
+        verbose_name_plural = "Daily Learning Streaks"
+        unique_together = ['user']
+
+    def __str__(self):
+        return f"{self.user.username} - Streak: {self.current_streak} (Longest: {self.longest_streak})"
+
+    def update_streak(self, learning_date):
+        """Update learning streak based on learning date"""
+        if self.last_learning_date == learning_date:
+            # Already updated today
+            return
+
+        yesterday = learning_date - timezone.timedelta(days=1)
+
+        if self.last_learning_date == yesterday:
+            # Continue streak
+            self.current_streak += 1
+            if self.current_streak > self.longest_streak:
+                self.longest_streak = self.current_streak
+        elif self.last_learning_date is None or self.last_learning_date < yesterday:
+            # Reset streak
+            self.current_streak = 1
+
+        self.last_learning_date = learning_date
+        self.total_days_learned += 1
+        self.save()
+
+
+class DailyLearningSettings(models.Model):
+    """User settings for daily learning"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='daily_learning_settings'
+    )
+    daily_target = models.IntegerField(
+        default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+        help_text="Số câu hỏi mục tiêu mỗi ngày"
+    )
+    preferred_difficulty = models.CharField(
+        max_length=20,
+        choices=Question.DIFFICULTY_CHOICES,
+        default='medium'
+    )
+    preferred_topics = models.ManyToManyField(
+        Topic,
+        blank=True,
+        related_name='user_learning_preferences',
+        help_text="Chủ đề yêu thích"
+    )
+    exercise_types = models.CharField(
+        max_length=100,
+        default='translation,listening',
+        help_text="Các loại bài tập (cách nhau bằng dấu phẩy)"
+    )
+    reminder_enabled = models.BooleanField(default=True)
+    reminder_time = models.TimeField(default="09:00:00")
+    auto_play_audio = models.BooleanField(default=True)
+    speech_rate = models.FloatField(
+        default=1.0,
+        validators=[MinValueValidator(0.5), MaxValueValidator(2.0)],
+        help_text="Tốc độ phát âm (0.5 - 2.0)"
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Daily Learning Settings"
+        verbose_name_plural = "Daily Learning Settings"
+        unique_together = ['user']
+
+    def __str__(self):
+        return f"{self.user.username} - Target: {self.daily_target} questions/day"
+
+    def get_exercise_types_list(self):
+        """Get exercise types as list"""
+        return [t.strip() for t in self.exercise_types.split(',') if t.strip()]
+
+    def set_exercise_types_list(self, types_list):
+        """Set exercise types from list"""
+        self.exercise_types = ','.join(types_list)

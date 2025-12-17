@@ -375,4 +375,105 @@ export const updateWeeklyQuestionProgress = async (username, questionId, userAns
   }
 };
 
+// Daily Learning System endpoints
+export const getDailyLearningDashboard = async (username) => {
+  try {
+    const response = await api.get(`/daily-learning/dashboard/?username=${username}`);
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi lấy dashboard học tập hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const startDailyLearningSession = async (username, exerciseType = 'mixed', targetQuestions = 10) => {
+  try {
+    const response = await api.post('/daily-learning/sessions/', {
+      username: username,
+      exercise_type: exerciseType,
+      target_questions: targetQuestions
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi bắt đầu buổi học hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const getDailyLearningSessions = async (username, exerciseType = '') => {
+  try {
+    let url = `/daily-learning/sessions/?username=${username}`;
+    if (exerciseType) {
+      url += `&exercise_type=${exerciseType}`;
+    }
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi lấy buổi học hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const submitDailyLearningAnswer = async (username, sessionId, questionId, userAnswer, timeTaken = 0) => {
+  try {
+    const response = await api.post('/daily-learning/answer/', {
+      username: username,
+      session_id: sessionId,
+      question_id: questionId,
+      user_answer: userAnswer,
+      time_taken: timeTaken
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi nộp bài học tập hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const getDailyLearningSettings = async (username) => {
+  try {
+    const response = await api.get(`/daily-learning/settings/?username=${username}`);
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi lấy cài đặt học tập hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const updateDailyLearningSettings = async (username, settings) => {
+  try {
+    const response = await api.put('/daily-learning/settings/', {
+      username: username,
+      ...settings
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi cập nhật cài đặt học tập hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const getDailyLearningHistory = async (username, page = 1, pageSize = 20, days = 30) => {
+  try {
+    const response = await api.get(`/daily-learning/history/?username=${username}&page=${page}&page_size=${pageSize}&days=${days}`);
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi lấy lịch sử học tập hàng ngày:', error);
+    throw error;
+  }
+};
+
+export const resetDailyLearningSession = async (username, sessionId) => {
+  try {
+    const response = await api.post('/daily-learning/reset-session/', {
+      username: username,
+      session_id: sessionId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi làm lại buổi học hàng ngày:', error);
+    throw error;
+  }
+};
+
 export default api;
